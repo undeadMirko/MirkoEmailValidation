@@ -1,0 +1,20 @@
+{
+  "name": "bonce-validator",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dns": "^0.2.2",
+    "email-validator": "^2.0.4",
+    "express": "^4.21.1",
+    "imap": "^0.8.19",
+    "nodemailer": "^6.9.16",
+    "util": "^0.12.5"
+  }
+}
