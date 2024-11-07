@@ -1,9 +1,13 @@
 const express = require('express');
 const emailValidator = require('email-validator');
 const dns = require('dns');
-const AWS = require('aws-sdk'); // Importar AWS SDK para SES
-const Imap = require('imap');  // Para leer los rebotes de correo
+const AWS = require('aws-sdk');  // Usamos el SDK de AWS para SES
+const Imap = require('imap');    // Para leer los rebotes de correo
 const inspect = require('util').inspect;
+
+// Configurar AWS SES
+AWS.config.update({ region: 'us-east-2' });  // Cambia la región si es necesario
+const ses = new AWS.SES({ apiVersion: '2010-12-01' });
 
 // Crear la aplicación Express
 const app = express();
@@ -11,13 +15,6 @@ const port = 3000;
 
 // Middleware para parsear JSON en las solicitudes
 app.use(express.json());
-
-// Configurar la región de AWS SES
-AWS.config.update({
-  region: 'us-east-1',  // Cambia esto a la región donde está habilitado SES
-});
-
-const ses = new AWS.SES();
 
 // Función para validar el formato del correo electrónico
 function validateEmailFormat(email) {
@@ -37,7 +34,7 @@ function validateMxRecord(domain) {
   });
 }
 
-// Función para enviar un correo de prueba utilizando SES
+// Función para enviar un correo de prueba usando SES
 async function sendTestEmail(email) {
   const params = {
     Destination: {
@@ -46,24 +43,22 @@ async function sendTestEmail(email) {
     Message: {
       Body: {
         Text: {
-          Charset: 'UTF-8',
           Data: 'Este es un correo de prueba para validar la dirección.',
         },
       },
       Subject: {
-        Charset: 'UTF-8',
         Data: 'Correo de prueba',
       },
     },
-    Source: 'moonsethra@gmail.com', // Usa un correo verificado en SES
+    Source: 'moonsethra@gmail.com', // Reemplaza con tu correo verificado en SES
   };
 
   try {
-    const result = await ses.sendEmail(params).promise();
-    console.log('Correo de prueba enviado:', result);
+    const data = await ses.sendEmail(params).promise();
+    console.log('Correo de prueba enviado:', data.MessageId);
     return true;
   } catch (error) {
-    console.error('Error enviando correo de prueba:', error);
+    console.error('Error enviando correo de prueba con SES:', error);
     return false;
   }
 }
@@ -75,14 +70,14 @@ function processBounces() {
     password: 'Moon_13084',     // La contraseña de esa cuenta
     host: 'imap.gmail.com',    // El host IMAP de tu servidor de correo
     port: 993,
-    tls: true,
+    tls: true
   });
 
   imap.once('ready', function () {
     imap.openBox('INBOX', true, function (err, box) {
       if (err) throw err;
       const f = imap.seq.fetch('1:*', { bodies: '', struct: true });
-
+      
       f.on('message', function (msg, seqno) {
         const prefix = '(#' + seqno + ') ';
         msg.on('body', function (stream) {
@@ -128,23 +123,17 @@ app.post('/validate-email', async (req, res) => {
     return res.status(400).send({ error: 'El correo electrónico es obligatorio' });
   }
 
-  // Validar el formato del correo electrónico
-  if (!validateEmailFormat(email)) {
-    return res.status(400).send({ error: 'El formato del correo electrónico es inválido' });
-  }
-
-  const domain = email.split('@')[1];
-
   try {
+    // Validar el formato del correo electrónico
+    if (!validateEmailFormat(email)) {
+      return res.status(400).send({ error: 'El formato del correo electrónico es inválido' });
+    }
+
+    const domain = email.split('@')[1];
+
     // Validar los registros MX del dominio
     await validateMxRecord(domain);
-    
-    // Verificar si el dominio pertenece a los dominios más populares
-    const popularDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'icloud.com'];
-    if (!popularDomains.includes(domain)) {
-      return res.status(400).send({ error: 'El dominio del correo no es uno de los más populares.' });
-    }
-    
+
     // Enviar correo de prueba y esperar el rebote
     const result = await sendTestEmail(email);
 
