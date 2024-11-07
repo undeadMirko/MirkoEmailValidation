@@ -154,7 +154,7 @@ app.post('/validate-email', async (req, res) => {
   }
 });
 
-// Iniciar el servidor
-app.listen(port, () => {
-  console.log(`Servidor ejecutándose en http://localhost:${port}`);
+// Iniciar el servidor, escuchando en 0.0.0.0 para ser accesible desde fuera
+app.listen(port, '0.0.0.0', () => {
+  console.log(`Servidor ejecutándose en http://0.0.0.0:${port}`);
 });
